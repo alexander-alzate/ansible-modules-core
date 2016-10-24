@@ -48,6 +48,11 @@ options:
     version_added: "0.8"
     required: no
     default: null
+  test:
+    description:
+      - a shell comand, when it returns true this step will B(not) be run.
+    required: no
+    default: null
   chdir:
     description:
       - cd into this directory before running the command
@@ -135,6 +140,7 @@ def main():
           executable = dict(),
           creates = dict(type='path'),
           removes = dict(type='path'),
+          test = dict(),
           warn = dict(type='bool', default=True),
         )
     )
@@ -145,6 +151,7 @@ def main():
     args = module.params['_raw_params']
     creates = module.params['creates']
     removes = module.params['removes']
+    test = module.params['test']
     warn = module.params['warn']
 
     if args.strip() == '':
@@ -176,6 +183,18 @@ def main():
                 stdout="skipped, since %s does not exist" % removes,
                 changed=False,
                 rc=0
+            )
+
+    if test:
+        # Do not run the command if the line contains test=command and command
+        # returns true
+        rc, out, err = module.run_command (test)
+        if rc == 0:
+            module.exit_json(
+                cmd=args,
+                stdout="Skipped, since test command returns true",
+                changed=False,
+                rc=rc
             )
 
     warnings = list()
