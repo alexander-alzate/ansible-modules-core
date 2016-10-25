@@ -51,6 +51,7 @@ options:
   test:
     description:
       - a shell comand, when it returns true this step will B(not) be run.
+    version_added: "2.3"
     required: no
     default: null
   chdir:
