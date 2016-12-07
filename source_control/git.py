@@ -18,6 +18,10 @@
 # You should have received a copy of the GNU General Public License
 # along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 
+ANSIBLE_METADATA = {'status': ['preview'],
+                    'supported_by': 'core',
+                    'version': '1.0'}
+
 DOCUMENTATION = '''
 ---
 module: git
@@ -194,22 +198,35 @@ notes:
 
 EXAMPLES = '''
 # Example git checkout from Ansible Playbooks
-- git: repo=git://foosball.example.org/path/to/repo.git
-       dest=/srv/checkout
-       version=release-0.22
+- git:
+    repo: git://foosball.example.org/path/to/repo.git
+    dest: /srv/checkout
+    version: release-0.22
 
 # Example read-write git checkout from github
-- git: repo=ssh://git@github.com/mylogin/hello.git dest=/home/mylogin/hello
+- git:
+    repo: ssh://git@github.com/mylogin/hello.git
+    dest: /home/mylogin/hello
 
 # Example just ensuring the repo checkout exists
-- git: repo=git://foosball.example.org/path/to/repo.git dest=/srv/checkout update=no
+- git:
+    repo: git://foosball.example.org/path/to/repo.git
+    dest: /srv/checkout
+    update: no
 
 # Example just get information about the repository whether or not it has
 # already been cloned locally.
-- git: repo=git://foosball.example.org/path/to/repo.git dest=/srv/checkout clone=no update=no
+- git:
+    repo: git://foosball.example.org/path/to/repo.git
+    dest: /srv/checkout
+    clone: no
+    update: no
 
 # Example checkout a github repo and use refspec to fetch all pull requests
-- git: repo=https://github.com/ansible/ansible-examples.git dest=/src/ansible-examples refspec=+refs/pull/*:refs/heads/*
+- git:
+    repo: https://github.com/ansible/ansible-examples.git
+    dest: /src/ansible-examples
+    refspec: '+refs/pull/*:refs/heads/*'
 '''
 
 import os
@@ -223,7 +240,7 @@ from distutils.version import LooseVersion
 from ansible.module_utils.basic import AnsibleModule, get_module_path
 from ansible.module_utils.known_hosts import add_git_host_key
 from ansible.module_utils.six import b, string_types
-from ansible.module_utils._text import to_bytes, to_native
+from ansible.module_utils._text import to_native
 
 
 def head_splitter(headfile, remote, module=None, fail_on_error=False):
@@ -307,7 +324,7 @@ fi
 if [ -z "$GIT_KEY" ]; then
     ssh $BASEOPTS "$@"
 else
-    ssh -i "$GIT_KEY" $BASEOPTS "$@"
+    ssh -i "$GIT_KEY" -o IdentitiesOnly=yes $BASEOPTS "$@"
 fi
 """
     fh.write(template)
@@ -519,7 +536,7 @@ def get_tags(git_path, module, dest):
 def is_remote_branch(git_path, module, dest, remote, version):
     cmd = '%s ls-remote %s -h refs/heads/%s' % (git_path, remote, version)
     (rc, out, err) = module.run_command(cmd, check_rc=True, cwd=dest)
-    if to_bytes(version, errors='surrogate_or_strict') in out:
+    if to_native(version, errors='surrogate_or_strict') in out:
         return True
     else:
         return False
@@ -971,8 +988,7 @@ def main():
             remote_url_changed = remote_url and remote_url != repo and remote_url != unfrackgitpath(repo)
         else:
             remote_url_changed = set_remote_url(git_path, module, repo, dest, remote)
-        if remote_url_changed:
-            result.update(remote_url_changed=True)
+        result.update(remote_url_changed=remote_url_changed)
 
         if need_fetch:
             if module.check_mode:
